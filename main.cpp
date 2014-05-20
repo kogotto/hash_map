@@ -23,16 +23,15 @@ struct empty_t {};
 template<class key_t>
 class THash {
 public:
-    THash(size_t a = 13567923,
-          size_t b = 12734527,
-          size_t c = (1 << 31) - 1):
+    explicit THash(size_t a = 13567923,
+                   size_t b = 12734527,
+                   size_t c = (1 << 31) - 1):
         a(a),
         b(b),
         c(c)
     {}
 
-    size_t operator()(const key_t & key)
-    {
+    size_t operator()(const key_t & key) const {
         return (a + b * key) % c;
     }
 
@@ -43,7 +42,32 @@ private:
 };
 
 
-template<class T, class U, class F = THash<T> >
+template<>
+class THash<std::string> {
+public:
+    explicit THash(size_t a = 13726483,
+                   size_t m = (1 << 31) - 1):
+        a(a),
+        m(m)
+    {}
+
+    size_t operator()(const std::string & key) const {
+        size_t result = 0;
+        for (std::string::const_iterator it = key.begin();
+             it != key.end();
+             ++it) {
+            result = (result * a + *it) % m;
+        }
+        return result;
+    }
+
+private:
+    size_t a;
+    size_t m;
+};
+
+
+template<class T, class U, int maxFillingInProcents = 50, class F = THash<T> >
 class THashMap {
 public:
     typedef T key_t;
@@ -63,37 +87,84 @@ public:
         } state;
     };
 
-    THashMap(size_t capacity = 10, const hfunc_t & hfunc = hfunc_t()):
+    explicit THashMap(size_t capacity = 11, const hfunc_t & hfunc = hfunc_t()):
         map(capacity),
         size(0),
         hfunc(hfunc)
     {}
 
-    void insert(const key_t & key, const data_t & data) {
+    bool insert(const key_t & key, const data_t & data = data_t()) {
+        if (find(key) != 0) {
+            return false;
+        }
+
+        if (filling() > maxFilling()) {
+            rebuild();
+        }
+
         size_t index = hash(key);
         while (map[index].state != item_t::ITEM_NONE) {
             index = next(index);
         }
 
-        data[index].key = key;
-        data[index].data = data;
-        data[index].state = item_t::ITEM_BUSY;
+        map[index].key = key;
+        map[index].data = data;
+        map[index].state = item_t::ITEM_BUSY;
+        ++size;
+        return true;
     }
 
     bool remove(const key_t & key) {
-        size_t index = hash(key);
-        while (map[index].key != key) {
-            index = next(index);
-        }
+        size_t startIndex = hash(key);
+        size_t index = startIndex;
+        do {
+            if (map[index].key == key && map[index].state == item_t::ITEM_BUSY){
+                map[index].state = item_t::ITEM_DELETED;
+                --size;
+                return true;
+            }
 
+            index = next(index);
+        } while (index != startIndex);
+
+        return false;
     }
 
-    const item_t * find(const key_t & elem) const{}
-    item_t * find(const key_t & elem){}
+    const item_t * find(const key_t & key) const {
+        size_t startIndex = hash(key);
+        size_t index = startIndex;
+        do {
+            if (map[index].key == key && map[index].state == item_t::ITEM_BUSY){
+                return &map[index];
+            }
+
+            index = next(index);
+        } while (index != startIndex);
+
+        return 0;
+    }
+
+    item_t * find(const key_t & key) {
+        size_t startIndex = hash(key);
+        size_t index = startIndex;
+        do {
+            if (map[index].key == key && map[index].state == item_t::ITEM_BUSY){
+                return &map[index];
+            }
+
+            index = next(index);
+        } while (index != startIndex);
+
+        return 0;
+    }
+
+    size_t getSize() const {
+        return size;
+    }
 
 private:
-    void insertNoRebuild(const key_t & key, const data_t & data){}
-    void rebuild();
+    void insertNoRebuild(const item_t & item){}
+    void rebuild(){};
 
     size_t next(size_t current) const {
         return (current + 1) % capacity();
@@ -107,15 +178,28 @@ private:
         return map.size();
     }
 
+    float maxFilling() const {
+        return static_cast<float>(maxFillingInProcents) / 100;
+    }
+
+    float filling() const {
+        return static_cast<float>(getSize()) / capacity();
+    }
+
     vector<item_t> map;
     size_t size;
     hfunc_t hfunc;
 };
 //=============================================================================
 
+typedef THashMap<string, empty_t> THashStringSet;
+
 int main()
 {
-    THashMap<string, empty_t> hashTable;
+    const string OK("OK");
+    const string FAIL("FAIL");
+
+    THashStringSet stringSet;
     while(true) {
         char action = 0;
         cin >> action;
@@ -129,13 +213,25 @@ int main()
 
         switch (action) {
         case '+' :
-            cout << "add " << str;
+            if (stringSet.insert(str)) {
+                cout << OK << endl;
+            } else {
+                cout << FAIL << endl;
+            }
             break;
         case '-':
-            cout << "delete " << str;
+            if (stringSet.remove(str)) {
+                cout << OK << endl;
+            } else {
+                cout << FAIL << endl;
+            }
             break;
         case'?':
-            cout << "find " << str;
+            if (stringSet.find(str) != 0) {
+                cout << OK << endl;
+            } else {
+                cout << FAIL << endl;
+            }
             break;
         default:
            assert(false) ;
