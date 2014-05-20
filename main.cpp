@@ -16,7 +16,6 @@
 #include <string>
 #include <assert.h>
 #include <vector>
-using namespace std;
 
 struct empty_t {};
 
@@ -87,7 +86,7 @@ public:
         } state;
     };
 
-    explicit THashMap(size_t capacity = 11, const hfunc_t & hfunc = hfunc_t()):
+    explicit THashMap(size_t capacity = 4, const hfunc_t & hfunc = hfunc_t()):
         map(capacity),
         size(0),
         hfunc(hfunc)
@@ -163,15 +162,45 @@ public:
     }
 
 private:
-    void insertNoRebuild(const item_t & item){}
-    void rebuild(){};
+    typedef std::vector<item_t> map_t;
+
+    static void moveItemTo(map_t & newMap, const item_t & item, const hfunc_t & hfunk) {
+        size_t newMapSize = newMap.size();
+        size_t index = hash(item.key, newMapSize, hfunk);
+        while (newMap[index].state != item_t::ITEM_NONE) {
+            index = next(index, newMapSize);
+        }
+
+        newMap[index] = item;
+    }
+
+    void rebuild() {
+        map_t newMap(capacity() * 2);
+
+        for (size_t i = 0; i < map.size(); ++i) {
+            if (map[i].state != item_t::ITEM_BUSY) {
+                continue;
+            }
+            moveItemTo(newMap, map[i], hfunc);
+        }
+
+        map.swap(newMap);
+    }
+
+    static size_t next(size_t current, size_t mod) {
+        return (current + 1) % mod;
+    }
 
     size_t next(size_t current) const {
-        return (current + 1) % capacity();
+        return next(current, capacity());
+    }
+
+    static size_t hash(const key_t & key, size_t mod, const hfunc_t & hfunc) {
+        return hfunc(key) % mod;
     }
 
     size_t hash(const key_t & key) const {
-        return hfunc(key) % capacity();
+        return hash(key, capacity(), hfunc);
     }
 
     size_t capacity() const {
@@ -186,12 +215,19 @@ private:
         return static_cast<float>(getSize()) / capacity();
     }
 
-    vector<item_t> map;
+    map_t map;
     size_t size;
     hfunc_t hfunc;
 };
 //=============================================================================
 
+void testHash();
+
+
+using std::string;
+using std::cin;
+using std::cout;
+using std::endl;
 typedef THashMap<string, empty_t> THashStringSet;
 
 int main()
@@ -241,4 +277,33 @@ int main()
 }
 
 //=============================================================================
+
+void testHash()
+{
+    THash<string> hash;
+    for (char c = 'a'; c <= 'z'; c++) {
+        cout << "hash(" << c << ") = " << hash(string(&c, 1)) % 11 << endl;
+    }
+
+    for (char c1 = 'a'; c1 <= 'z'; c1++) {
+        for (char c2 = 'a'; c2 <= 'z'; c2++) {
+            string str;
+            str.push_back(c1);
+            str.push_back(c2);
+            cout << "hash(" << str << ") = " << hash(str) % 11 << endl;
+        }
+    }
+
+    for (char c1 = 'a'; c1 <= 'z'; c1++) {
+        for (char c2 = 'a'; c2 <= 'z'; c2++) {
+            for (char c3 = 'a'; c3 <= 'z'; c3++) {
+                string str;
+                str.push_back(c1);
+                str.push_back(c2);
+                str.push_back(c3);
+                cout << "hash(" << str << ") = " << hash(str) % 11 << endl;
+            }
+        }
+    }
+}
 
