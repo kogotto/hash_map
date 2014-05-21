@@ -17,6 +17,10 @@
 #include <assert.h>
 #include <vector>
 
+// вариант со сдвигом почему-то вызывает ворнинг "overflow"
+const size_t BIG_PRIME = 0x7fffFFFF;
+//const size_t BIG_PRIME = (1 << 31) - 1;
+
 struct empty_t {};
 
 template<class key_t>
@@ -24,7 +28,7 @@ class THash {
 public:
     explicit THash(size_t a = 13567923,
                    size_t b = 12734527,
-                   size_t c = (1 << 31) - 1):
+                   size_t c = BIG_PRIME):
         a(a),
         b(b),
         c(c)
@@ -45,7 +49,7 @@ template<>
 class THash<std::string> {
 public:
     explicit THash(size_t a = 13726483,
-                   size_t m = (1 << 31) - 1):
+                   size_t m = BIG_PRIME):
         a(a),
         m(m)
     {}
@@ -119,6 +123,9 @@ public:
         } state;
     };
 
+    /**
+     * TODO capacity must be power of 2
+     */
     explicit THashMap(size_t capacity = 4, const hfunc_t & hfunc = hfunc_t()):
         map(capacity),
         size(0),
@@ -134,54 +141,50 @@ public:
             rebuild();
         }
 
-        size_t index = hash(key);
-        for (size_t iteration = 1;
-             map[index].state == item_t::ITEM_BUSY;
-             ++iteration) {
-            index = next(index,iteration);
-        }
-
-        map[index].key = key;
-        map[index].data = data;
-        map[index].state = item_t::ITEM_BUSY;
-        ++size;
-        return true;
-    }
-
-    bool remove(const key_t & key) {
-        size_t startIndex = hash(key);
-        size_t index = startIndex;
-        size_t iteration = 1;
-        do {
-            if (map[index].key == key && map[index].state == item_t::ITEM_BUSY){
-                map[index].state = item_t::ITEM_DELETED;
-                --size;
+        const size_t currentCapacity = capacity();
+        for (probe_iterator_t it(hash(key), currentCapacity);
+             it.get() != currentCapacity;
+             it.next()) {
+            if (map[it.get()].state != item_t::ITEM_BUSY) {
+                map[it.get()].key = key;
+                map[it.get()].data = data;
+                map[it.get()].state = item_t::ITEM_BUSY;
+                ++size;
                 return true;
             }
+        }
 
-            index = next(index, iteration);
-            ++iteration;
-        } while (index != startIndex);
-
+        assert(false && "can\'t insert");
         return false;
     }
 
+    bool remove(const key_t & key) {
+        item_t * const item = find(key);
+
+        if (item == 0) {
+            return false;
+        }
+
+        item->state = item_t::ITEM_DELETED;
+        --size;
+        return true;
+    }
+
     const item_t * find(const key_t & key) const {
-        size_t startIndex = hash(key);
-        size_t index = startIndex;
-        size_t iteration = 1;
-        do {
-            if (map[index].state == item_t::ITEM_NONE) {
+        const size_t currentCapacity = capacity();
+        for (probe_iterator_t it(hash(key), currentCapacity);
+             it.get() < currentCapacity;
+             it.next()) {
+
+            if (map[it.get()].state == item_t::ITEM_NONE) {
                 return 0;
             }
 
-            if (map[index].key == key && map[index].state == item_t::ITEM_BUSY){
-                return &map[index];
+            if (map[it.get()].state == item_t::ITEM_BUSY &&
+                    map[it.get()].key == key) {
+                return &map[it.get()];
             }
-
-            index = next(index, iteration);
-            ++iteration;
-        } while (index != startIndex);
+        }
 
         return 0;
     }
@@ -198,16 +201,19 @@ private:
     typedef std::vector<item_t> map_t;
 
     static void moveItemTo(map_t & newMap, const item_t & item, const hfunc_t & hfunk) {
-        size_t newMapSize = newMap.size();
-        size_t index = hash(item.key, newMapSize, hfunk);
-        for (size_t iteration = 1;
-             newMap[index].state != item_t::ITEM_NONE;
-             ++iteration
-             ) {
-            index = next(index, iteration, newMapSize);
+        const size_t newCapacity = newMap.size();
+        const size_t itemHash = hash(item.key, newCapacity, hfunk);
+        for (probe_iterator_t it(itemHash, newCapacity);
+             it.get() < newCapacity;
+             it.next()) {
+
+            if (newMap[it.get()].state != item_t::ITEM_BUSY) {
+                newMap[it.get()] = item;
+                return;
+            }
         }
 
-        newMap[index] = item;
+        assert(false && "can\'t move element to new map while rebuild");
     }
 
     void rebuild() {
@@ -221,14 +227,6 @@ private:
         }
 
         map.swap(newMap);
-    }
-
-    static size_t next(size_t current, size_t iteration, size_t mod) {
-        return (current + iteration % 4) % mod;
-    }
-
-    size_t next(size_t current, size_t iteration) const {
-        return next(current, iteration, capacity());
     }
 
     static size_t hash(const key_t & key, size_t mod, const hfunc_t & hfunc) {
@@ -270,6 +268,15 @@ int main()
 {
 //    testProb(11);
 //    return 0;
+//    size_t max = -1;
+//    cout << "sizeof(max) = " << sizeof(max) << " max = " << max;
+//    if (BIG_PRIME == (1 << 31) - 1) {
+//        cout << "BIG_PRIME is cool" << endl;
+//    } else {
+//        cout << "BIG_PRIME is fucking wrong" << endl;
+//    }
+//    return 0;
+
     const string OK("OK");
     const string FAIL("FAIL");
 
