@@ -66,7 +66,37 @@ private:
 };
 
 
-template<class T, class U, int maxFillingInProcents = 50, class F = THash<T> >
+class TSquareProbeIterator {
+public:
+    TSquareProbeIterator(size_t startIndex, size_t mod):
+        currentIndex(startIndex),
+        iteration(0),
+        mod(mod)
+    {}
+
+    void next() {
+        ++iteration;
+        if (iteration < mod) {
+            currentIndex += iteration;
+            currentIndex %= mod;
+            return;
+        }
+
+        currentIndex = mod;
+    }
+
+    size_t get() const {
+        return currentIndex;
+    }
+
+private:
+    size_t currentIndex;
+    size_t iteration;
+    size_t mod;
+};
+
+
+template<class T, class U, int maxFillingInProcents = 50, class F = THash<T>, class I = TSquareProbeIterator >
 class THashMap {
     friend int main();
     friend void testProb(size_t);
@@ -74,6 +104,7 @@ public:
     typedef T key_t;
     typedef U data_t;
     typedef F hfunc_t;
+    typedef I probe_iterator_t;
     struct item_t {
         item_t():
             state(ITEM_NONE)
@@ -237,7 +268,8 @@ typedef THashMap<string, empty_t> THashStringSet;
 
 int main()
 {
-    testProb(4);
+//    testProb(11);
+//    return 0;
     const string OK("OK");
     const string FAIL("FAIL");
 
@@ -315,6 +347,40 @@ void testHash()
 
 //using std::width;
 
+void testProb(size_t power) {
+    if (power == 0) {
+        return;
+    }
+
+//    testProb(power - 1);
+
+    size_t max = (1 << power);
+
+    cout.width(4);
+    cout << "i";
+    for (size_t i = 0; i < max; ++i) {
+        cout.width(4);
+        cout << i;
+    }
+    cout << endl;
+
+    for (size_t i = 0; i < max; ++i) {
+        cout.width(4);
+        cout << i;
+        for (TSquareProbeIterator it(i, max); it.get() != max; it.next()){
+            cout.width(4);
+            cout << it.get();
+        }
+        cout << endl;
+    }
+
+    for (size_t i = 0; i < max + 1; ++i) {
+        cout << "----";
+    }
+    cout << endl;
+}
+
+#if 0
 void testProb(size_t power)
 {
     if (power == 0) {
@@ -348,4 +414,4 @@ void testProb(size_t power)
     }
     cout << endl;
 }
-
+#endif
