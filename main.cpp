@@ -103,8 +103,6 @@ private:
 
 template<class T, class U, int maxFillingInProcents = 50, class F = THash<T>, class I = TSquareProbeIterator >
 class THashMap {
-    friend int main();
-    friend void testProb(size_t);
 public:
     typedef T key_t;
     typedef U data_t;
