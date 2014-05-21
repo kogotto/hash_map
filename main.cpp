@@ -21,7 +21,7 @@
 const size_t BIG_PRIME = 0x7fffFFFF;
 //const size_t BIG_PRIME = (1 << 31) - 1;
 
-struct empty_t {};
+
 
 template<class key_t>
 class THash {
@@ -43,7 +43,7 @@ private:
     size_t b;
     size_t c;
 };
-
+//=============================================================================
 
 template<>
 class THash<std::string> {
@@ -68,7 +68,7 @@ private:
     size_t a;
     size_t m;
 };
-
+//=============================================================================
 
 class TSquareProbeIterator {
 public:
@@ -98,6 +98,7 @@ private:
     size_t iteration;
     size_t mod;
 };
+//=============================================================================
 
 
 template<class T, class U, int maxFillingInProcents = 50, class F = THash<T>, class I = TSquareProbeIterator >
@@ -255,28 +256,16 @@ private:
 };
 //=============================================================================
 
-void testHash();
-void testProb(size_t power);
-
 using std::string;
+struct empty_t {};
+typedef THashMap<string, empty_t> THashStringSet;
+
 using std::cin;
 using std::cout;
 using std::endl;
-typedef THashMap<string, empty_t> THashStringSet;
 
 int main()
 {
-//    testProb(11);
-//    return 0;
-//    size_t max = -1;
-//    cout << "sizeof(max) = " << sizeof(max) << " max = " << max;
-//    if (BIG_PRIME == (1 << 31) - 1) {
-//        cout << "BIG_PRIME is cool" << endl;
-//    } else {
-//        cout << "BIG_PRIME is fucking wrong" << endl;
-//    }
-//    return 0;
-
     const string OK("OK");
     const string FAIL("FAIL");
 
@@ -323,102 +312,4 @@ int main()
 
 //=============================================================================
 
-void testHash()
-{
-    THash<string> hash;
-    for (char c = 'a'; c <= 'z'; c++) {
-        cout << "hash(" << c << ") = " << hash(string(&c, 1)) % 11 << endl;
-    }
 
-    for (char c1 = 'a'; c1 <= 'z'; c1++) {
-        for (char c2 = 'a'; c2 <= 'z'; c2++) {
-            string str;
-            str.push_back(c1);
-            str.push_back(c2);
-            cout << "hash(" << str << ") = " << hash(str) % 11 << endl;
-        }
-    }
-
-    for (char c1 = 'a'; c1 <= 'z'; c1++) {
-        for (char c2 = 'a'; c2 <= 'z'; c2++) {
-            for (char c3 = 'a'; c3 <= 'z'; c3++) {
-                string str;
-                str.push_back(c1);
-                str.push_back(c2);
-                str.push_back(c3);
-                cout << "hash(" << str << ") = " << hash(str) % 11 << endl;
-            }
-        }
-    }
-}
-
-//using std::width;
-
-void testProb(size_t power) {
-    if (power == 0) {
-        return;
-    }
-
-//    testProb(power - 1);
-
-    size_t max = (1 << power);
-
-    cout.width(4);
-    cout << "i";
-    for (size_t i = 0; i < max; ++i) {
-        cout.width(4);
-        cout << i;
-    }
-    cout << endl;
-
-    for (size_t i = 0; i < max; ++i) {
-        cout.width(4);
-        cout << i;
-        for (TSquareProbeIterator it(i, max); it.get() != max; it.next()){
-            cout.width(4);
-            cout << it.get();
-        }
-        cout << endl;
-    }
-
-    for (size_t i = 0; i < max + 1; ++i) {
-        cout << "----";
-    }
-    cout << endl;
-}
-
-#if 0
-void testProb(size_t power)
-{
-    if (power == 0) {
-        return;
-    }
-
-    testProb(power - 1);
-
-    size_t max = (1 << power);
-    cout.width(4);
-    cout << "i";
-    for (size_t i = 0; i < max; ++i) {
-        cout.width(4);
-        cout << i;
-    }
-    cout << endl;
-
-    for (size_t i = 0; i < max; ++i) {
-        cout.width(4);
-        cout << i;
-        size_t index = i;
-        for (size_t j = 0; j < max; ++j) {
-            cout.width(4);
-            cout << (index = THashStringSet::next(index, j, max));
-        }
-        cout << endl;
-    }
-
-    for (size_t i = 0; i < max + 1; ++i) {
-        cout << "----";
-    }
-    cout << endl;
-}
-#endif
