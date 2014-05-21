@@ -68,6 +68,8 @@ private:
 
 template<class T, class U, int maxFillingInProcents = 50, class F = THash<T> >
 class THashMap {
+    friend int main();
+    friend void testProb(size_t);
 public:
     typedef T key_t;
     typedef U data_t;
@@ -225,7 +227,7 @@ private:
 //=============================================================================
 
 void testHash();
-
+void testProb(size_t power);
 
 using std::string;
 using std::cin;
@@ -235,6 +237,7 @@ typedef THashMap<string, empty_t> THashStringSet;
 
 int main()
 {
+    testProb(4);
     const string OK("OK");
     const string FAIL("FAIL");
 
@@ -308,5 +311,41 @@ void testHash()
             }
         }
     }
+}
+
+//using std::width;
+
+void testProb(size_t power)
+{
+    if (power == 0) {
+        return;
+    }
+
+    testProb(power - 1);
+
+    size_t max = (1 << power);
+    cout.width(4);
+    cout << "i";
+    for (size_t i = 0; i < max; ++i) {
+        cout.width(4);
+        cout << i;
+    }
+    cout << endl;
+
+    for (size_t i = 0; i < max; ++i) {
+        cout.width(4);
+        cout << i;
+        size_t index = i;
+        for (size_t j = 0; j < max; ++j) {
+            cout.width(4);
+            cout << (index = THashStringSet::next(index, j, max));
+        }
+        cout << endl;
+    }
+
+    for (size_t i = 0; i < max + 1; ++i) {
+        cout << "----";
+    }
+    cout << endl;
 }
 
