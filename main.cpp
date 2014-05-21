@@ -102,7 +102,7 @@ public:
         }
 
         size_t index = hash(key);
-        while (map[index].state != item_t::ITEM_NONE) {
+        while (map[index].state == item_t::ITEM_BUSY) {
             index = next(index);
         }
 
@@ -133,6 +133,10 @@ public:
         size_t startIndex = hash(key);
         size_t index = startIndex;
         do {
+            if (map[index].state == item_t::ITEM_NONE) {
+                return 0;
+            }
+
             if (map[index].key == key && map[index].state == item_t::ITEM_BUSY){
                 return &map[index];
             }
