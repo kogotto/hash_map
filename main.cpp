@@ -102,8 +102,10 @@ public:
         }
 
         size_t index = hash(key);
-        while (map[index].state == item_t::ITEM_BUSY) {
-            index = next(index);
+        for (size_t iteration = 1;
+             map[index].state == item_t::ITEM_BUSY;
+             ++iteration) {
+            index = next(index,iteration);
         }
 
         map[index].key = key;
@@ -116,6 +118,7 @@ public:
     bool remove(const key_t & key) {
         size_t startIndex = hash(key);
         size_t index = startIndex;
+        size_t iteration = 1;
         do {
             if (map[index].key == key && map[index].state == item_t::ITEM_BUSY){
                 map[index].state = item_t::ITEM_DELETED;
@@ -123,7 +126,8 @@ public:
                 return true;
             }
 
-            index = next(index);
+            index = next(index, iteration);
+            ++iteration;
         } while (index != startIndex);
 
         return false;
@@ -132,6 +136,7 @@ public:
     const item_t * find(const key_t & key) const {
         size_t startIndex = hash(key);
         size_t index = startIndex;
+        size_t iteration = 1;
         do {
             if (map[index].state == item_t::ITEM_NONE) {
                 return 0;
@@ -141,7 +146,8 @@ public:
                 return &map[index];
             }
 
-            index = next(index);
+            index = next(index, iteration);
+            ++iteration;
         } while (index != startIndex);
 
         return 0;
@@ -161,8 +167,11 @@ private:
     static void moveItemTo(map_t & newMap, const item_t & item, const hfunc_t & hfunk) {
         size_t newMapSize = newMap.size();
         size_t index = hash(item.key, newMapSize, hfunk);
-        while (newMap[index].state != item_t::ITEM_NONE) {
-            index = next(index, newMapSize);
+        for (size_t iteration = 1;
+             newMap[index].state != item_t::ITEM_NONE;
+             ++iteration
+             ) {
+            index = next(index, iteration, newMapSize);
         }
 
         newMap[index] = item;
@@ -181,12 +190,12 @@ private:
         map.swap(newMap);
     }
 
-    static size_t next(size_t current, size_t mod) {
-        return (current + 1) % mod;
+    static size_t next(size_t current, size_t iteration, size_t mod) {
+        return (current + iteration % 4) % mod;
     }
 
-    size_t next(size_t current) const {
-        return next(current, capacity());
+    size_t next(size_t current, size_t iteration) const {
+        return next(current, iteration, capacity());
     }
 
     static size_t hash(const key_t & key, size_t mod, const hfunc_t & hfunc) {
