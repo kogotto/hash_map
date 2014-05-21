@@ -144,21 +144,7 @@ public:
     }
 
     item_t * find(const key_t & key) {
-
         return const_cast<item_t *>(const_cast<const THashMap *>(this)->find(key));
-#if 0
-        size_t startIndex = hash(key);
-        size_t index = startIndex;
-        do {
-            if (map[index].key == key && map[index].state == item_t::ITEM_BUSY){
-                return &map[index];
-            }
-
-            index = next(index);
-        } while (index != startIndex);
-
-        return 0;
-#endif
     }
 
     size_t getSize() const {
